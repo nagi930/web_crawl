@@ -45,6 +45,13 @@ class StockPrice:
             return self.dfs[index]
         raise AttributeError(f'{cls.__name__} object has no attribute {name}')
 
+    def __call__(self, idx):
+        return self.dfs[idx]
+
+    def __repr__(self):
+        return f'Stock Information: {self.item_list}, ' \
+               f'DataFrame count: {len(self.dfs)}'
+
     def make_dataframe(self):
         url_list = [(StockPrice.stock_items[code],
                     f'https://finance.naver.com/item/sise_day.nhn?code={code}&page={page}')
@@ -85,13 +92,18 @@ if __name__ == '__main__':
 
     dataframes = stocks.make_dataframe()
 
+    print(stocks)
+    print(stocks(0))
+    print(stocks[0])
+    print(stocks.삼성전자)
+    # print(stocks.서울식품)
+
     for dataframe in dataframes:
         print(dataframe)
         print('-' * 100)
 
     stocks.save_dataframe('./source/dataframe')
 
-    print(stocks[4])
-    print(stocks.삼성전자)
-    # print(stocks.서울식품)
+
+
 
