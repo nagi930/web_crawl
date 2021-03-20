@@ -23,11 +23,11 @@ class StockPrice:
     }
     stock_names = [name for name in stock_items.values()]
 
-    def __init__(self, code_list, start=1, end=5):
-        self.code_list = code_list
-        self.start = start
-        self.end = end
-        self.sep = end - start + 1
+    def __init__(self, *code_list):
+        self.code_list = list(code_list)
+        self._start = 1
+        self._end = 5
+        self.sep = self._end - self._start + 1
         self.item = None
         self.item_list = []
         self.dfs = []
@@ -48,15 +48,34 @@ class StockPrice:
     def __call__(self, idx):
         return self.dfs[idx]
 
-    def __repr__(self):
+    def __str__(self):
         return f'Stock Information: {self.item_list}, ' \
                f'DataFrame count: {len(self.dfs)}'
 
+    @property
+    def page(self):
+        return f'start page: {self._start}, end page: {self._end}'
+
+    @page.setter
+    def page(self, val):
+        try:
+            start, end = val
+        except ValueError:
+            print('please set parameter type tuple')
+            return
+
+        if start > end:
+            raise ValueError('please set start below end')
+        self._start = start
+        self._end = end
+        self.sep = self._end - self._start + 1
+        print(f'start page: {self._start}, end page: {self._end}')
+
     def make_dataframe(self):
-        url_list = [(StockPrice.stock_items[code],
+        url_list = [(StockPrice.stock_items.get(code, code),
                     f'https://finance.naver.com/item/sise_day.nhn?code={code}&page={page}')
                     for code in self.code_list
-                    for page in range(self.start, self.end+1)]
+                    for page in range(self._start, self._end+1)]
         url_list = deque(url_list)
 
         while url_list:
@@ -87,9 +106,11 @@ class StockPrice:
 
 
 if __name__ == '__main__':
-    stocks = StockPrice(['005930', '051910', '063160', '006400', '185750',
-                         '006980', '096770', '035720', '214390', '011200'])
-
+    stocks = StockPrice('005930', '051910', '063160', '006400', '185750',
+                         '006980', '096770', '035720', '214390', '011200', '000660')
+    print(stocks.page)
+    # stocks.page = (4, 3)
+    stocks.page = (1, 3)
     dataframes = stocks.make_dataframe()
 
     print(stocks)
