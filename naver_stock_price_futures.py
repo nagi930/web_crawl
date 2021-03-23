@@ -27,30 +27,9 @@ class StockPrice:
         self.code_list = list(code_list)
         self._start = 1
         self._end = 5
-        self.sep = self._end - self._start + 1
-        self.item = None
+        self.sep = 5
         self.item_list = []
         self.dfs = []
-
-    def __len__(self):
-        return len(self.dfs)
-
-    def __getitem__(self, index):
-        return self.dfs[index]
-
-    def __getattr__(self, name):
-        cls = type(self)
-        if name in cls.stock_names and name in self.item_list:
-            index = self.item_list.index(name)
-            return self.dfs[index]
-        raise AttributeError(f'{cls.__name__} object has no attribute {name}')
-
-    def __call__(self, idx):
-        return self.dfs[idx]
-
-    def __str__(self):
-        return f'Stock Information: {self.item_list}, ' \
-               f'DataFrame count: {len(self.dfs)}'
 
     @property
     def page(self):
@@ -68,41 +47,46 @@ class StockPrice:
             raise ValueError('please set start below end')
         self._start = start
         self._end = end
-        self.sep = self._end - self._start + 1
+        self.sep = end - start + 1
         print(f'start page: {self._start}, end page: {self._end}')
 
-    @staticmethod
-    def make(urls):
+    def make(self, urls):
         df_list = []
-        for code, url in urls:
+        for stock_code, stock_name, url in urls:
             time.sleep(0.1)
             html = requests.get(url, headers=HEADERS).text
             df_list.append(pd.read_html(html)[0].dropna())
+        self.item_list.append(urls[0][1])
         df = pd.concat(df_list)
-        df.insert(loc=0, column='종목코드', value=urls[0][0])
-        df = df.sort_values(by='날짜', ascending=True).set_index('날짜')
-        return df
+        df.insert(loc=1, column='stock_name', value=urls[0][1])
+        df.insert(loc=0, column='stock_code', value=urls[0][0])
+        df = df.sort_values(by='날짜', ascending=True)
+        df = df[['stock_code', '날짜', 'stock_name', '시가', '고가', '저가', '종가', '거래량']]
+        df.columns = ['stock_code', 'stock_date', 'stock_name', 'open_price', 'high_price', 'low_price', 'close_price', 'volume']
+        return df.reset_index(drop=True)
 
     def make_dataframe(self):
-        url_list = [[(StockPrice.stock_items.get(code, code),
+        url_list = [[(code, StockPrice.stock_items.get(code, code),
                     f'https://finance.naver.com/item/sise_day.nhn?code={code}&page={page}')
                     for page in range(self._start, self._end+1)] for code in self.code_list]
 
+        MAX = 20
+        WORKERS = min(MAX, len(url_list))
+
         start_time = time.time()
 
-        with ThreadPoolExecutor() as executor:  # with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=WORKERS) as executor:  # with ProcessPoolExecutor() as executor:
             self.dfs = executor.map(self.make, url_list)
 
         end_time = time.time() - start_time
 
-        print(f'time: {end_time:.2f}s')
+        print(f'duration of time: {end_time:.2f}s')
         return self.dfs
 
 
     def save_dataframe(self, dir):
         make_dir(dir)
-        if len(self.dfs) == 0:
-            self.make_dataframe()
+        self.make_dataframe()
         for i, df in enumerate(self.dfs):
             df.to_csv(dir+f'/{self.code_list[i]}.csv')
 
@@ -110,9 +94,12 @@ class StockPrice:
 if __name__ == '__main__':
     stocks = StockPrice('005930', '051910', '063160', '006400', '185750',
                          '006980', '096770', '035720', '214390', '011200', '000660')
-    stocks.page = (1, 40)
-    print(list(stocks.make_dataframe()))
+    stocks.page = (1, 1)
+    stocks.make_dataframe()
+    for stock_df in stocks.dfs:
+        print(stock_df)
 
+    stocks.save_dataframe('./source/dataframe')
 
 
 
