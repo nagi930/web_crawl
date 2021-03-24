@@ -1,5 +1,6 @@
 import time
 import os
+from functools import wraps
 import pandas as pd
 import requests
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
@@ -16,6 +17,18 @@ def make_dir(dir):
         print('already existed dir')
         return
 
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        end = time.perf_counter() - start
+        func_name = func.__name__
+        print(f'{func_name}, duration of time: {end:.2f}s')
+        return result
+    return wrapper
+
+
 class StockPrice:
     stock_items = {
         '005930': '삼성전자', '051910': 'LG화학', '063160': '종근당바이오', '006400': '삼성SDI', '185750': '종근당',
@@ -29,7 +42,7 @@ class StockPrice:
         self._end = 5
         self.sep = 5
         self.item_list = []
-        self.dfs = []
+        self.dfs = None
 
     @property
     def page(self):
@@ -65,22 +78,17 @@ class StockPrice:
         df.columns = ['stock_code', 'stock_date', 'stock_name', 'open_price', 'high_price', 'low_price', 'close_price', 'volume']
         return df.reset_index(drop=True)
 
+    @timer
     def make_dataframe(self):
         url_list = [[(code, StockPrice.stock_items.get(code, code),
                     f'https://finance.naver.com/item/sise_day.nhn?code={code}&page={page}')
                     for page in range(self._start, self._end+1)] for code in self.code_list]
 
-        MAX = 20
-        WORKERS = min(MAX, len(url_list))
-
-        start_time = time.time()
+        WORKERS = min(20, len(url_list))
 
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:  # with ProcessPoolExecutor() as executor:
             self.dfs = executor.map(self.make, url_list)
 
-        end_time = time.time() - start_time
-
-        print(f'duration of time: {end_time:.2f}s')
         return self.dfs
 
 
@@ -94,13 +102,9 @@ class StockPrice:
 if __name__ == '__main__':
     stocks = StockPrice('005930', '051910', '063160', '006400', '185750',
                          '006980', '096770', '035720', '214390', '011200', '000660')
-    stocks.page = (1, 1)
+    stocks.page = (1, 10)
     stocks.make_dataframe()
     for stock_df in stocks.dfs:
         print(stock_df)
 
     stocks.save_dataframe('./source/dataframe')
-
-
-
-
