@@ -80,8 +80,8 @@ class StockPrice:
 
     @timer
     def make_dataframe(self):
-        url_list = [[(code, StockPrice.stock_items.get(code, code),
-                    f'https://finance.naver.com/item/sise_day.nhn?code={code}&page={page}')
+        base = 'https://finance.naver.com/item/sise_day.nhn?'
+        url_list = [[(code, StockPrice.stock_items.get(code, code), f'{base}code={code}&page={page}')
                     for page in range(self._start, self._end+1)] for code in self.code_list]
 
         WORKERS = min(20, len(url_list))

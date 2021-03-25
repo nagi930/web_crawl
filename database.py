@@ -24,7 +24,8 @@ class Singleton(type):
     _instances = {}
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+            print(super().__call__(*args, **kwargs))
         return cls._instances[cls]
 
 class DataBase(metaclass=Singleton):
@@ -40,10 +41,7 @@ class DataBase(metaclass=Singleton):
         self.table = table
         self.con = None
         self.error_list = []
-        if corp == None:
-            self._corp = stock.get_market_ticker_list(date)
-        else:
-            self._corp = corp
+        self._corp = corp or stock.get_market_ticker_list(date)
 
     @property
     def corp(self):
@@ -51,7 +49,8 @@ class DataBase(metaclass=Singleton):
 
     @corp.setter
     def corp(self, codes):
-        self._corp = [code for code in codes if code in self._corp]
+        self._corp = [code for code in codes
+                            if code in self._corp]
         print('상장 리스트에 없는 종목코드는 삭제됩니다.', codes, self._corp, sep='\n')
 
     @property
@@ -61,10 +60,8 @@ class DataBase(metaclass=Singleton):
         return self.con
 
     def sql(self, query, database=None, table=None):
-        if database == None:
-            database = self.database
-        if table == None:
-            table = self.table
+        database = database or self.database
+        table = table or self.table
 
         if query == DataBase.Sql.CREATE:
             c = self.connect.cursor()
@@ -116,7 +113,7 @@ class DataBase(metaclass=Singleton):
 
 if __name__ == '__main__':
     d = DataBase()
-    d.sql(DataBase.Sql.CREATE)
+    # d.sql(DataBase.Sql.CREATE)
     # d.corp = ['005930', '051910', '063160', '006400', '185750', '006980', '096770', '035720', '214390', '011200']
     # d.save('20000101', '20210324')
 
