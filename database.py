@@ -34,12 +34,13 @@ class DataBase(metaclass=Singleton):
         DELETE = 1
         SELECT = 2
 
-    def __init__(self, user='root', password='******', database='default_db', table='default_tb', date=datetime.datetime.today().strftime('%Y%m%d'), corp=None):
+    def __init__(self, user='root', password='qw75718856**', database='default_db', table='default_tb', date=datetime.datetime.today().strftime('%Y%m%d'), corp=None):
         self.user = user
         self.password = password
         self.database = database
         self.table = table
-        self.con = None
+        self._connect = None
+        self._engine =None
         self.error_list = []
         self._corp = corp or stock.get_market_ticker_list(date)
 
@@ -49,15 +50,21 @@ class DataBase(metaclass=Singleton):
 
     @corp.setter
     def corp(self, codes):
-        self._corp = [code for code in codes
-                            if code in self._corp]
+        self._corp = [code for code in codes if code in self._corp]
         print('상장 리스트에 없는 종목코드는 삭제됩니다.', codes, self._corp, sep='\n')
 
     @property
     def connect(self):
-        self.con = pymysql.connect(host='localhost', port=3306, user=self.user,
+        if self._connect is None:
+            self._connect = pymysql.connect(host='localhost', port=3306, user=self.user,
                                    password=self.password, charset='utf8')
-        return self.con
+        return self._connect
+
+    @property
+    def engine(self):
+        if self._engine is None:
+            self._engine = create_engine(f'mysql+mysqldb://{self.user}:{self.password}@localhost/{self.database}', encoding='utf-8')
+        return self._engine
 
     def sql(self, query, database=None, table=None):
         database = database or self.database
@@ -66,7 +73,7 @@ class DataBase(metaclass=Singleton):
         if query == DataBase.Sql.CREATE:
             c = self.connect.cursor()
             c.execute(f'CREATE DATABASE IF NOT EXISTS {database}')
-            self.con.commit()
+            self.connect.commit()
             c.close()
 
         elif query == DataBase.Sql.SELECT:
@@ -76,16 +83,18 @@ class DataBase(metaclass=Singleton):
             print(a)
             c.close()
 
-    def __getattr__(self, item):
-        if item == 'engine':
-            try:
-                eg = create_engine(f'mysql+mysqldb://{self.user}:{self.password}@localhost/{self.database}', encoding='utf-8')
-                setattr(self, item, eg)
-                return eg
-            except Exception as e:
-                print(e)
-        else:
-            raise AttributeError
+
+
+    # def __getattr__(self, item):
+    #     if item == 'engine':
+    #         try:
+    #             eg = create_engine(f'mysql+mysqldb://{self.user}:{self.password}@localhost/{self.database}', encoding='utf-8')
+    #             setattr(self, item, eg)
+    #             return eg
+    #         except Exception as e:
+    #             print(e)
+    #     else:
+    #         raise AttributeError
 
     @timer
     def save(self, start, end):
@@ -113,8 +122,8 @@ class DataBase(metaclass=Singleton):
 
 if __name__ == '__main__':
     d = DataBase()
-    # d.sql(DataBase.Sql.CREATE)
-    # d.corp = ['005930', '051910', '063160', '006400', '185750', '006980', '096770', '035720', '214390', '011200']
-    # d.save('20000101', '20210324')
+    d.sql(DataBase.Sql.CREATE)
+    d.corp = ['005930', '051910', '063160', '006400', '185750', '006980', '096770', '035720', '214390', '011200']
+    d.save('20210301', '20210324')
 
 
