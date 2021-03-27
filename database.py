@@ -34,7 +34,7 @@ class DataBase(metaclass=Singleton):
         DELETE = 1
         SELECT = 2
 
-    def __init__(self, user='root', password='qw75718856**', database='default_db', table='default_tb', date=datetime.datetime.today().strftime('%Y%m%d'), corp=None):
+    def __init__(self, user='root', password='******', database='default_db', table='default_tb', date=datetime.datetime.today().strftime('%Y%m%d'), corp=None):
         self.user = user
         self.password = password
         self.database = database
